@@ -268,6 +268,38 @@ export const MusicProvider = ({ children }) => {
     } catch (e) {}
   };
 
+
+  const addMultipleTracks = async (newTracksList) => {
+    if (!currentUser) return;
+    try {
+      for (const t of newTracksList) {
+        const payload = {
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          cover: t.cover,
+          audio_url: t.audioUrl,
+          is_audio_file: true,
+          user_id: currentUser.id
+        };
+        await supabase.from('tracks').insert([payload]);
+      }
+      fetchTracksFromSupabase();
+    } catch (e) {
+      console.error("Error adding USB tracks", e);
+    }
+  };
+
+  const deleteAlbum = async (albumName) => {
+    if (!currentUser) return;
+    try {
+      await supabase.from('tracks').delete().eq('album', albumName).eq('user_id', currentUser.id);
+      fetchTracksFromSupabase();
+    } catch (e) {
+      console.error("Error deleting album", e);
+    }
+  };
+
   return (
     <MusicContext.Provider value={{
       tracks: allTracks,
@@ -292,6 +324,8 @@ export const MusicProvider = ({ children }) => {
       removeTrackFromPlaylist,
       deletePlaylist,
       addTrackCatalog,
+      addMultipleTracks, // <-- Exportada para HomeView
+      deleteAlbum,       // <-- Exportada para HomeView
       deleteTrack
     }}>
       {children}
