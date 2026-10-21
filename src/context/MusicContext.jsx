@@ -85,15 +85,22 @@ export const MusicProvider = ({ children }) => {
     if (currentUser) {
       fetchTracksFromSupabase();
       fetchPlaylistsFromSupabase();
+    } else {
+      setDbTracks([]);
+      setDbPlaylists([]);
     }
   }, [currentUser]);
 
   const fetchTracksFromSupabase = async () => {
+    if (!currentUser) return;
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('tracks')
         .select('*')
+        .eq('user_id', currentUser.id) // <-- Filtrado exclusivo por usuario
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
 
       if (data) {
         const formatted = data.map(t => ({
@@ -115,12 +122,15 @@ export const MusicProvider = ({ children }) => {
   };
 
   const fetchPlaylistsFromSupabase = async () => {
+    if (!currentUser) return;
     try {
-      const { data: playlistsData } = await supabase
+      const { data: playlistsData, error } = await supabase
         .from('playlists')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .eq('user_id', currentUser.id) // <-- Filtrado exclusivo por usuario
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
 
       if (playlistsData) {
         const playlistsWithTracks = await Promise.all(playlistsData.map(async (pl) => {
@@ -208,14 +218,16 @@ export const MusicProvider = ({ children }) => {
         album: newTrack.album,
         cover: newTrack.cover,
         youtube_id: newTrack.youtubeId,
-        user_id: currentUser.id,
+        user_id: currentUser.id, // <-- Asignación obligatoria al usuario en sesión
         is_audio_file: false
       };
 
       const { data } = await supabase.from('tracks').insert([payload]).select().single();
       fetchTracksFromSupabase();
       return data?.id;
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error adding track", e);
+    }
   };
 
   const createPlaylist = async (name) => {
@@ -223,7 +235,9 @@ export const MusicProvider = ({ children }) => {
     try {
       await supabase.from('playlists').insert([{ user_id: currentUser.id, name }]);
       fetchPlaylistsFromSupabase();
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error creating playlist", e);
+    }
   };
 
   const addTrackToPlaylist = async (playlistId, trackId) => {
