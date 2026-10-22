@@ -82,7 +82,7 @@ export default function HomeView() {
       return;
     }
 
-    const newTracks = audioFiles.map(file => {
+ const newTracks = audioFiles.map(file => {
       const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
       const parts = nameWithoutExt.split('-');
       const songTitle = parts.length > 1 ? parts[1].trim() : nameWithoutExt;
@@ -92,14 +92,17 @@ export default function HomeView() {
         title: songTitle,
         artist: songArtist,
         album: 'USB / Mis Canciones',
+        cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
         audioUrl: URL.createObjectURL(file),
-        rawFile: file,
+        rawFile: file, // <-- IMPORTANTE: Pasa el archivo real aquí
         isAudioFile: true
       };
     });
 
-    addMultipleTracks(newTracks);
-    alert(`¡Se han cargado y guardado permanentemente ${newTracks.length} canciones desde tu USB! No se perderán al reiniciar.`);
+    if (typeof addMultipleTracks === 'function') {
+      addMultipleTracks(newTracks);
+    }
+    alert(`¡Se han cargado ${newTracks.length} canciones desde tu USB correctamente!`);
   };
 
   const artistsList = Array.from(new Set(tracks.map(t => t.artist)));
