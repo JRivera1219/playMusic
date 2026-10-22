@@ -268,14 +268,79 @@ export const MusicProvider = ({ children }) => {
       fetchTracksFromSupabase();
     } catch (e) {}
   };
-const addMultipleTracks = async (newTracksList) => {
-    if (!currentUser) return;
+  // const addMultipleTracks = async (newTracksList) => {
+  //     if (!currentUser) return;
+
+  //     try {
+  //       for (const t of newTracksList) {
+  //         let finalAudioUrl = null;
+
+  //         // 1. Si viene el archivo físico (rawFile), subirlo a Supabase Storage
+  //         if (t.rawFile) {
+  //           const fileExt = t.rawFile.name.split('.').pop();
+  //           const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+  //           const { data: uploadData, error: uploadError } = await supabase.storage
+  //             .from('songs')
+  //             .upload(fileName, t.rawFile, {
+  //               cacheControl: '3600',
+  //               upsert: true
+  //             });
+
+  //           if (uploadError) {
+  //             console.error("Error subiendo el archivo MP3 a Storage:", uploadError);
+  //             alert(`Error al subir ${t.title}: ` + uploadError.message);
+  //             continue;
+  //           }
+
+  //           // 2. Obtener la URL pública real en Internet
+  //           const { data: urlData } = supabase.storage
+  //             .from('songs')
+  //             .getPublicUrl(fileName);
+
+  //           if (urlData?.publicUrl) {
+  //             finalAudioUrl = urlData.publicUrl;
+  //           }
+  //         } else {
+  //           finalAudioUrl = t.audioUrl;
+  //         }
+
+  //         // 3. Insertar en la tabla 'tracks' con la URL publica https://
+  //         if (finalAudioUrl && !finalAudioUrl.startsWith('blob:')) {
+  //           const payload = {
+  //             title: t.title,
+  //             artist: t.artist,
+  //             album: t.album || 'USB / Mis Canciones',
+  //             cover: t.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+  //             audio_url: finalAudioUrl, // <-- URL pública real de Supabase
+  //             is_audio_file: true,
+  //             user_id: currentUser.id
+  //           };
+
+  //           await supabase.from('tracks').insert([payload]);
+  //         }
+  //       }
+
+  //       // 4. Refrescar lista de canciones
+  //       fetchTracksFromSupabase();
+  //     } catch (e) {
+  //       console.error("Error procesando canciones:", e);
+  //     }
+  //   };
+// prueba 
+  const addMultipleTracks = async (newTracksList) => {
+    if (!currentUser) {
+      alert("Debes iniciar sesión para agregar canciones.");
+      return;
+    }
 
     try {
       for (const t of newTracksList) {
-        let finalAudioUrl = null;
+        let finalAudioUrl = t.audioUrl || null;
+        let isAudioFile = t.isAudioFile ?? true;
+        let youtubeId = t.youtubeId || null;
 
-        // 1. Si viene el archivo físico (rawFile), subirlo a Supabase Storage
+        // 1. Si viene un archivo físico (USB), subirlo a Supabase Storage
         if (t.rawFile) {
           const fileExt = t.rawFile.name.split('.').pop();
           const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
@@ -293,41 +358,46 @@ const addMultipleTracks = async (newTracksList) => {
             continue;
           }
 
-          // 2. Obtener la URL pública real en Internet
           const { data: urlData } = supabase.storage
             .from('songs')
             .getPublicUrl(fileName);
 
           if (urlData?.publicUrl) {
             finalAudioUrl = urlData.publicUrl;
+            isAudioFile = true;
           }
-        } else {
-          finalAudioUrl = t.audioUrl;
         }
 
-        // 3. Insertar en la tabla 'tracks' con la URL publica https://
-        if (finalAudioUrl && !finalAudioUrl.startsWith('blob:')) {
-          const payload = {
-            title: t.title,
-            artist: t.artist,
-            album: t.album || 'USB / Mis Canciones',
-            cover: t.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
-            audio_url: finalAudioUrl, // <-- URL pública real de Supabase
-            is_audio_file: true,
-            user_id: currentUser.id
-          };
+        // 2. Construir el payload tolerante a canciones locales y web/YouTube
+        const payload = {
+          title: t.title,
+          artist: t.artist,
+          album: t.album || 'Búsqueda Global',
+          cover: t.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+          audio_url: finalAudioUrl,
+          youtube_id: youtubeId,
+          is_audio_file: isAudioFile,
+          user_id: currentUser.id
+        };
 
-          await supabase.from('tracks').insert([payload]);
+        // 3. Insertar en la tabla 'tracks' de Supabase
+        const { error: insertError } = await supabase.from('tracks').insert([payload]);
+
+        if (insertError) {
+          console.error("Error guardando en la base de datos:", insertError);
         }
       }
 
-      // 4. Refrescar lista de canciones
-      fetchTracksFromSupabase();
+      // 4. Refrescar el catálogo desde Supabase
+      if (typeof fetchTracksFromSupabase === 'function') {
+        await fetchTracksFromSupabase();
+      }
     } catch (e) {
       console.error("Error procesando canciones:", e);
     }
   };
-
+  
+// prueba  termina 
   const deleteAlbum = async (albumName) => {
     if (!currentUser) return;
     try {
@@ -338,6 +408,64 @@ const addMultipleTracks = async (newTracksList) => {
     }
   };
 
+
+  // Buscar música en YouTube usando el endpoint público estable de búsqueda
+  const searchGlobalMusic = async (query) => {
+    if (!query || query.trim() === '') return [];
+    try {
+      // Usamos el servicio proxy rápido corsproxy.io para conectar con YouTube sin restricciones CORS
+      const targetUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+      const html = await res.text();
+
+      // Extraer los datos iniciales de los videos guardados en el HTML de YouTube
+      const ytInitialDataMatch = html.match(/var ytInitialData = ({.*?});<\/script>/);
+      
+      if (ytInitialDataMatch && ytInitialDataMatch[1]) {
+        const jsonData = JSON.parse(ytInitialDataMatch[1]);
+        const contents = jsonData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents;
+
+        if (Array.isArray(contents)) {
+          const tracks = [];
+          for (const item of contents) {
+            const video = item.videoRenderer;
+            if (video && video.videoId) {
+              tracks.push({
+                id: `yt_${video.videoId}`,
+                youtubeId: video.videoId,
+                title: video.title?.runs?.[0]?.text || 'Canción sin título',
+                artist: video.ownerText?.runs?.[0]?.text || video.longBylineText?.runs?.[0]?.text || 'YouTube Music',
+                album: 'YouTube Music',
+                cover: video.thumbnail?.thumbnails?.slice(-1)[0]?.url || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`,
+                isAudioFile: false
+              });
+            }
+          }
+          if (tracks.length > 0) return tracks.slice(0, 20);
+        }
+      }
+
+      // Respaldo de seguridad directo a iTunes si YouTube bloquea la ip
+      const itunesRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+      const itunesData = await itunesRes.json();
+      if (itunesData?.results?.length > 0) {
+        return itunesData.results.map(track => ({
+          id: `itunes_${track.trackId}`,
+          title: track.trackName,
+          artist: track.artistName,
+          album: track.collectionName || 'Álbum',
+          cover: track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+          audioUrl: track.previewUrl,
+          isAudioFile: true
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error en búsqueda global:", error);
+      return [];
+    }
+  };
   return (
     <MusicContext.Provider value={{
       tracks: allTracks,
@@ -364,6 +492,7 @@ const addMultipleTracks = async (newTracksList) => {
       addTrackCatalog,
       addMultipleTracks, // <-- Exportada para HomeView
       deleteAlbum,       // <-- Exportada para HomeView
+      searchGlobalMusic, // <-- new
       deleteTrack
     }}>
       {children}

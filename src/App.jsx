@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Player from './components/Player';
 import HomeView from './components/HomeView';
-import SearchView from './components/SearchView';
+// import SearchView from './components/SearchView';
+import GlobalSearch from './components/GlobalSearch';
 import PlaylistView from './components/PlaylistView';
 import AdminDashboard from './components/AdminDashboard';
 import LikedView from './components/LikedView';
@@ -57,7 +58,8 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
           {currentView === 'home' && <HomeView />}
-          {currentView === 'search' && <SearchView />}
+          {/* {currentView === 'search' && <SearchView />} */}
+            {currentView === 'search' && <GlobalSearch />}
           {currentView === 'liked' && <LikedView />}
           {currentView === 'admin' && <AdminDashboard />}
           {typeof currentView === 'object' && currentView.type === 'playlist' && (
