@@ -46,6 +46,15 @@ export default function Player() {
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
   }, []);
+// new 
+useEffect(() => {
+    if (currentTrack?.isAudioFile && audioRef.current) {
+      audioRef.current.load();
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.log("Play error:", e));
+      }
+    }
+  }, [currentTrack?.id, currentTrack?.audioUrl]);
 
   // Fetch lyrics when modal is open
   useEffect(() => {
@@ -398,13 +407,19 @@ export default function Player() {
           />
         </div>
 
-        {currentTrack.isAudioFile && (
+      {currentTrack.isAudioFile && (
           <audio
             ref={audioRef}
             src={currentTrack.audioUrl}
+            autoPlay={isPlaying}
             onTimeUpdate={handleAudioTimeUpdate}
             onLoadedMetadata={handleAudioTimeUpdate}
             onEnded={handleAudioEnded}
+            onCanPlayThrough={() => {
+              if (isPlaying && audioRef.current) {
+                audioRef.current.play().catch(e => console.log("Error al reproducir audio local:", e));
+              }
+            }}
           />
         )}
       </div>

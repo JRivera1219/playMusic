@@ -5,26 +5,26 @@ import { supabase } from '../supabaseClient';
 const MusicContext = createContext();
 
 const INITIAL_TRACKS = [
-  {
-    id: 't1',
-    title: 'La Chona',
-    artist: 'Los Tucanes de Tijuana',
-    album: 'Me Robó el Corazón (1995)',
-    duration: '3:30',
-    cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
-    youtubeId: 'z29g4_y6J3I',
-    isAudioFile: false
-  },
-  {
-    id: 't2',
-    title: 'El Tucanazo',
-    artist: 'Los Tucanes de Tijuana',
-    album: 'Mundo de Amor (1996)',
-    duration: '3:15',
-    cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop',
-    youtubeId: '9bZkp7q19f0',
-    isAudioFile: false
-  }
+  // {
+  //   id: 't1',
+  //   title: 'La Chona',
+  //   artist: 'Los Tucanes de Tijuana',
+  //   album: 'Me Robó el Corazón (1995)',
+  //   duration: '3:30',
+  //   cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+  //   youtubeId: 'z29g4_y6J3I',
+  //   isAudioFile: false
+  // },
+  // {
+  //   id: 't2',
+  //   title: 'El Tucanazo',
+  //   artist: 'Los Tucanes de Tijuana',
+  //   album: 'Mundo de Amor (1996)',
+  //   duration: '3:15',
+  //   cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop',
+  //   youtubeId: '9bZkp7q19f0',
+  //   isAudioFile: false
+  // }
 ];
 
 export const MusicProvider = ({ children }) => {
@@ -156,6 +156,7 @@ export const MusicProvider = ({ children }) => {
   };
 
   const allTracks = [...INITIAL_TRACKS, ...dbTracks];
+
 
   const toggleLikeTrack = (trackId) => {
     setLikedTracks(prev => prev.includes(trackId) ? prev.filter(id => id !== trackId) : [...prev, trackId]);
