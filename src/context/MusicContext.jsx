@@ -267,26 +267,63 @@ export const MusicProvider = ({ children }) => {
       fetchTracksFromSupabase();
     } catch (e) {}
   };
-
-
-  const addMultipleTracks = async (newTracksList) => {
+const addMultipleTracks = async (newTracksList) => {
     if (!currentUser) return;
+
     try {
       for (const t of newTracksList) {
-        const payload = {
-          title: t.title,
-          artist: t.artist,
-          album: t.album,
-          cover: t.cover,
-          audio_url: t.audioUrl,
-          is_audio_file: true,
-          user_id: currentUser.id
-        };
-        await supabase.from('tracks').insert([payload]);
+        let finalAudioUrl = null;
+
+        // 1. Si viene el archivo físico (rawFile), subirlo a Supabase Storage
+        if (t.rawFile) {
+          const fileExt = t.rawFile.name.split('.').pop();
+          const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('songs')
+            .upload(fileName, t.rawFile, {
+              cacheControl: '3600',
+              upsert: true
+            });
+
+          if (uploadError) {
+            console.error("Error subiendo el archivo MP3 a Storage:", uploadError);
+            alert(`Error al subir ${t.title}: ` + uploadError.message);
+            continue;
+          }
+
+          // 2. Obtener la URL pública real en Internet
+          const { data: urlData } = supabase.storage
+            .from('songs')
+            .getPublicUrl(fileName);
+
+          if (urlData?.publicUrl) {
+            finalAudioUrl = urlData.publicUrl;
+          }
+        } else {
+          finalAudioUrl = t.audioUrl;
+        }
+
+        // 3. Insertar en la tabla 'tracks' con la URL publica https://
+        if (finalAudioUrl && !finalAudioUrl.startsWith('blob:')) {
+          const payload = {
+            title: t.title,
+            artist: t.artist,
+            album: t.album || 'USB / Mis Canciones',
+            cover: t.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+            audio_url: finalAudioUrl, // <-- URL pública real de Supabase
+            is_audio_file: true,
+            user_id: currentUser.id
+          };
+
+          await supabase.from('tracks').insert([payload]);
+        }
       }
+
+      // 4. Refrescar lista de canciones
       fetchTracksFromSupabase();
     } catch (e) {
-      console.error("Error adding USB tracks", e);
+      console.error("Error procesando canciones:", e);
     }
   };
 
