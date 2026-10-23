@@ -45,6 +45,7 @@ export default function GlobalSearch() {
         title: track.title,
         artist: track.artist,
         album: track.album || 'YouTube Music',
+        duration: track.duration || '3:30', // <--- Se manda la duración
         cover: track.cover,
         audioUrl: track.audioUrl || null,
         youtubeId: track.youtubeId || null,

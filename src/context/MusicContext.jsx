@@ -410,59 +410,95 @@ export const MusicProvider = ({ children }) => {
 
 
   // Buscar música en YouTube usando el endpoint público estable de búsqueda
+  // const searchGlobalMusic = async (query) => {
+  //   if (!query || query.trim() === '') return [];
+  //   try {
+  //     // Usamos el servicio proxy rápido corsproxy.io para conectar con YouTube sin restricciones CORS
+  //     const targetUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+  //     const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+  //     const html = await res.text();
+
+  //     // Extraer los datos iniciales de los videos guardados en el HTML de YouTube
+  //     const ytInitialDataMatch = html.match(/var ytInitialData = ({.*?});<\/script>/);
+      
+  //     if (ytInitialDataMatch && ytInitialDataMatch[1]) {
+  //       const jsonData = JSON.parse(ytInitialDataMatch[1]);
+  //       const contents = jsonData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents;
+
+  //       if (Array.isArray(contents)) {
+  //         const tracks = [];
+  //         for (const item of contents) {
+  //           const video = item.videoRenderer;
+  //           if (video && video.videoId) {
+  //             tracks.push({
+  //               id: `yt_${video.videoId}`,
+  //               youtubeId: video.videoId,
+  //               title: video.title?.runs?.[0]?.text || 'Canción sin título',
+  //               artist: video.ownerText?.runs?.[0]?.text || video.longBylineText?.runs?.[0]?.text || 'YouTube Music',
+  //               album: 'YouTube Music',
+  //               cover: video.thumbnail?.thumbnails?.slice(-1)[0]?.url || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`,
+  //               isAudioFile: false
+  //             });
+  //           }
+  //         }
+  //         if (tracks.length > 0) return tracks.slice(0, 20);
+  //       }
+  //     }
+
+  //     // Respaldo de seguridad directo a iTunes si YouTube bloquea la ip
+  //     const itunesRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+  //     const itunesData = await itunesRes.json();
+  //     if (itunesData?.results?.length > 0) {
+  //       return itunesData.results.map(track => ({
+  //         id: `itunes_${track.trackId}`,
+  //         title: track.trackName,
+  //         artist: track.artistName,
+  //         album: track.collectionName || 'Álbum',
+  //         cover: track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
+  //         audioUrl: track.previewUrl,
+  //         isAudioFile: true
+  //       }));
+  //     }
+
+  //     return [];
+  //   } catch (error) {
+  //     console.error("Error en búsqueda global:", error);
+  //     return [];
+  //   }
+  // };
+
+// Buscar canciones completas exclusivamente desde YouTube
+// Buscar música global con IDs reales de YouTube para reproducción completa
+// Buscador global de canciones completas con IDs reales de YouTube
+
+// api  AIzaSyBtSeCs2dKgiFJrjvOwxRoRxrlSwWcmDTA
+  // Buscador global usando la API Oficial de YouTube Data v3
+// Buscador global usando la API Oficial de YouTube Data v3
   const searchGlobalMusic = async (query) => {
     if (!query || query.trim() === '') return [];
+    
+    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY || 'AIzaSyBtSeCs2dKgiFJrjvOwxRoRxrlSwWcmDTA';
+
     try {
-      // Usamos el servicio proxy rápido corsproxy.io para conectar con YouTube sin restricciones CORS
-      const targetUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
-      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
-      const html = await res.text();
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&key=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
 
-      // Extraer los datos iniciales de los videos guardados en el HTML de YouTube
-      const ytInitialDataMatch = html.match(/var ytInitialData = ({.*?});<\/script>/);
-      
-      if (ytInitialDataMatch && ytInitialDataMatch[1]) {
-        const jsonData = JSON.parse(ytInitialDataMatch[1]);
-        const contents = jsonData?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents;
-
-        if (Array.isArray(contents)) {
-          const tracks = [];
-          for (const item of contents) {
-            const video = item.videoRenderer;
-            if (video && video.videoId) {
-              tracks.push({
-                id: `yt_${video.videoId}`,
-                youtubeId: video.videoId,
-                title: video.title?.runs?.[0]?.text || 'Canción sin título',
-                artist: video.ownerText?.runs?.[0]?.text || video.longBylineText?.runs?.[0]?.text || 'YouTube Music',
-                album: 'YouTube Music',
-                cover: video.thumbnail?.thumbnails?.slice(-1)[0]?.url || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`,
-                isAudioFile: false
-              });
-            }
-          }
-          if (tracks.length > 0) return tracks.slice(0, 20);
-        }
-      }
-
-      // Respaldo de seguridad directo a iTunes si YouTube bloquea la ip
-      const itunesRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
-      const itunesData = await itunesRes.json();
-      if (itunesData?.results?.length > 0) {
-        return itunesData.results.map(track => ({
-          id: `itunes_${track.trackId}`,
-          title: track.trackName,
-          artist: track.artistName,
-          album: track.collectionName || 'Álbum',
-          cover: track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop',
-          audioUrl: track.previewUrl,
-          isAudioFile: true
+      if (data && data.items && data.items.length > 0) {
+        return data.items.map(item => ({
+          id: `yt_${item.id.videoId}`,
+          youtubeId: item.id.videoId, // ID real de 11 caracteres de YouTube
+          title: item.snippet.title,
+          artist: item.snippet.channelTitle || 'YouTube Music',
+          album: 'YouTube Music',
+          cover: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url,
+          isAudioFile: false // Fuerzado para que Player.jsx lo reproduzca completo vía YouTube
         }));
       }
 
       return [];
     } catch (error) {
-      console.error("Error en búsqueda global:", error);
+      console.error("Error consultando YouTube Data API:", error);
       return [];
     }
   };

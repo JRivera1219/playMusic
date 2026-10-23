@@ -63,6 +63,38 @@ useEffect(() => {
     }
   }, [currentTrack?.id, showLyrics]);
 
+  // segundo plano
+// Sincronizar metadatos y controles multimedia para reproducción en segundo plano (Media Session API)
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title || 'Reproduciendo música',
+        artist: currentTrack.artist || 'PlayMusic',
+        album: currentTrack.album || 'Catálogo General',
+        artwork: [
+          { src: currentTrack.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=512&h=512&fit=crop', sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (!isPlaying) handleTogglePlay();
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (isPlaying) handleTogglePlay();
+      });
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        previousTrack();
+      });
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        nextTrack();
+      });
+    }
+  }, [currentTrack, isPlaying]);
+  // fin de segundo plano
+
   const fetchLyrics = async (artist, title) => {
     setLoadingLyrics(true);
     setLyrics('');
